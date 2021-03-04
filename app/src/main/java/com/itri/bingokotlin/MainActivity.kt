@@ -19,6 +19,8 @@ import com.google.firebase.database.ValueEventListener
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity(), FirebaseAuth.AuthStateListener, View.OnClickListener {
+    private var member: Member? = null
+
     companion object{
         private val TAG = MainActivity::class.java.simpleName
         private val RC_SIGN_IN = 1
@@ -46,6 +48,20 @@ class MainActivity : AppCompatActivity(), FirebaseAuth.AuthStateListener, View.O
         avatar_3.setOnClickListener(this)
         avatar_4.setOnClickListener(this)
         avatar_5.setOnClickListener(this)
+        fab.setOnClickListener {
+            val roomEdit = EditText(this)
+            roomEdit.gravity = Gravity.CENTER
+            roomEdit.setText("Wellcome")
+            AlertDialog.Builder(this)
+                    .setTitle("Game Room")
+                    .setMessage("Your game room title??")
+                    .setView(roomEdit)
+                    .setPositiveButton("OK"){_ , _ ->
+                        var room = GameRoom(roomEdit.text.toString(), member!!)
+                        FirebaseDatabase.getInstance().getReference("rooms")
+                                .push().setValue(room)
+                    }.show()
+        }
     }
 
     override fun onStart() {
@@ -81,12 +97,17 @@ class MainActivity : AppCompatActivity(), FirebaseAuth.AuthStateListener, View.O
                         .setValue(this)
                         .addOnCompleteListener { Log.d(TAG, "addOnCompleteListener: ") }
             }
+            // uid setting
+            FirebaseDatabase.getInstance().getReference("users")
+                    .child(it.uid)
+                    .child("uid")
+                    .setValue(it.uid)
             //addValueEventListener vs SingleValueEvent
             FirebaseDatabase.getInstance().getReference("users")
                 .child(it.uid)
                 .addValueEventListener(object : ValueEventListener {
                     override fun onDataChange(snapshot: DataSnapshot) {
-                        val member = snapshot.getValue(Member::class.java)
+                        member = snapshot.getValue(Member::class.java)
                         member?.nickname?.also { nick ->
                             nickname.text = nick.toString()
                         } ?: showNicknameDialog(it)
