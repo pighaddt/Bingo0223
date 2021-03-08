@@ -1,24 +1,25 @@
 package com.itri.bingokotlin
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
-import android.view.Menu
-import android.view.MenuItem
-import android.view.View
+import android.view.*
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.firebase.ui.auth.AuthUI
+import com.firebase.ui.database.FirebaseRecyclerAdapter
+import com.firebase.ui.database.FirebaseRecyclerOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.*
 import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.room_row.view.*
 
 class MainActivity : AppCompatActivity(), FirebaseAuth.AuthStateListener, View.OnClickListener {
+    private lateinit var adapter: FirebaseRecyclerAdapter<GameRoom, RoomHolder>
     private var member: Member? = null
 
     companion object{
@@ -59,19 +60,64 @@ class MainActivity : AppCompatActivity(), FirebaseAuth.AuthStateListener, View.O
                     .setPositiveButton("OK"){_ , _ ->
                         var room = GameRoom(roomEdit.text.toString(), member!!)
                         FirebaseDatabase.getInstance().getReference("rooms")
-                                .push().setValue(room)
+                                .push().setValue(room, object : DatabaseReference.CompletionListener {
+                                override fun onComplete(
+                                    error: DatabaseError?,
+                                    ref: DatabaseReference
+                                ) {
+                                    val roomId = ref.key
+                                    val intent =
+                                        Intent(this@MainActivity, BingoActivity::class.java)
+                                            .run {
+                                                this.putExtra("ROOM_ID", roomId)
+                                                this.putExtra("IS_CREATOR", true)
+                                            }.apply {
+                                                startActivity(this)
+                                            }
+
+                                }
+
+                            })
                     }.show()
         }
+
+        //recycler setting
+        recycler.setHasFixedSize(true)
+        recycler.layoutManager = LinearLayoutManager(this)
+        val query = FirebaseDatabase.getInstance().getReference("rooms")
+                .limitToFirst(30)
+        val options = FirebaseRecyclerOptions.Builder<GameRoom>()
+                .setQuery(query, GameRoom::class.java)
+                .build()
+        adapter = object : FirebaseRecyclerAdapter<GameRoom , RoomHolder>(options) {
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RoomHolder {
+                val view = layoutInflater.inflate(R.layout.room_row, parent, false)
+                return RoomHolder(view)
+            }
+
+            override fun onBindViewHolder(holder: RoomHolder, position: Int, model: GameRoom) {
+                holder.roomAvatar.setImageResource(avatarId.get(model.init!!.avatarId))
+                holder.roomTitle.text = model.title
+            }
+
+        }
+        recycler.adapter = adapter
     }
 
+    class RoomHolder(itemView: View) : RecyclerView.ViewHolder(itemView){
+        var roomAvatar = itemView.room_image
+        var roomTitle = itemView.room_title
+    }
     override fun onStart() {
         super.onStart()
         FirebaseAuth.getInstance().addAuthStateListener(this)
+        adapter.startListening()
     }
 
     override fun onStop() {
         super.onStop()
         FirebaseAuth.getInstance().removeAuthStateListener(this)
+        adapter.stopListening()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
