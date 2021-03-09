@@ -74,11 +74,16 @@ class MainActivity : AppCompatActivity(), FirebaseAuth.AuthStateListener, View.O
                                             }.apply {
                                                 startActivity(this)
                                             }
-
+                                    //roomId to firebase
+                                    FirebaseDatabase.getInstance().getReference("rooms")
+                                            .child(roomId!!)
+                                            .child("id")
+                                            .setValue(roomId)
                                 }
 
                             })
-                    }.show()
+                    }.setNeutralButton("cancel", null)
+                    .show()
         }
 
         //recycler setting
@@ -98,6 +103,11 @@ class MainActivity : AppCompatActivity(), FirebaseAuth.AuthStateListener, View.O
             override fun onBindViewHolder(holder: RoomHolder, position: Int, model: GameRoom) {
                 holder.roomAvatar.setImageResource(avatarId.get(model.init!!.avatarId))
                 holder.roomTitle.text = model.title
+                holder.itemView.setOnClickListener {
+                    val intent = Intent(this@MainActivity, BingoActivity::class.java)
+                    intent.putExtra("ROOM_ID", model.id)
+                    startActivity(intent)
+                }
             }
 
         }
