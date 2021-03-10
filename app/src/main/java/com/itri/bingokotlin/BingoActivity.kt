@@ -143,8 +143,33 @@ class BingoActivity : AppCompatActivity() {
                         val number = snapshot.key?.toInt()
                         val pos = numberMap.get(number)
                         val picked = snapshot.value as Boolean
+                        buttons.get(pos!!).picked = picked
                         val holder : ButtonHolder = recycler.findViewHolderForAdapterPosition(pos!!) as ButtonHolder
-                        holder.button.picked = true
+                        holder.button.isEnabled = !picked
+                        //bingo count
+                        var bingo = 0
+                        var sum = 0
+                        var nums = IntArray(25)
+                        for (i in 0..24){
+                            nums[i] = if (buttons[i].picked) 1 else 0
+                        }
+                        for (i in 0..4){
+                            //row bingo counter
+                            sum = 0
+                            for(j in 0..4){
+                                sum += nums[i*5 + j]
+                            }
+                            if (sum == 5)
+                                bingo+=1
+                            //column bingo counter
+                            sum = 0
+                            for(j in 0..4){
+                                sum += nums[j*5 + i]
+                            }
+                            if (sum == 5)
+                                bingo+=1
+                            Log.d(TAG, "bingo: $bingo")
+                        }
                     }
                 }
 
@@ -156,9 +181,12 @@ class BingoActivity : AppCompatActivity() {
                 override fun onBindViewHolder(holder: ButtonHolder, position: Int, model: Boolean) {
                     //init recycler ball
                     holder.button.text = buttons.get(position).number.toString()
+                    holder.button.number = buttons.get(position).number
                     holder.button.isEnabled = !buttons.get(position).picked
                     holder.button.setOnClickListener {
+
                         val button = it as NumberButton
+                        Log.d(TAG, "button.number: ${button.number}, roomId $roomId")
                         FirebaseDatabase.getInstance().getReference("rooms")
                                 .child(roomId)
                                 .child("numbers")
