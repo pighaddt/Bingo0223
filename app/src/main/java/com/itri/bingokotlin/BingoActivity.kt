@@ -24,6 +24,7 @@ import kotlinx.android.synthetic.main.single_button.view.*
 class BingoActivity : AppCompatActivity() {
     private var isCreator: Boolean = false
     private var roomId: String? = null
+    private var myTurn : Boolean = false
     private lateinit var adapter: FirebaseRecyclerAdapter<Boolean, ButtonHolder>
     private var stateListener : ValueEventListener = object : ValueEventListener {
         override fun onDataChange(snapshot: DataSnapshot) {
@@ -34,14 +35,13 @@ class BingoActivity : AppCompatActivity() {
                 }
                 STATE_JOINED -> {
                     bingo_info.text = "creator pick ball first"
-                    if (isCreator){
                         FirebaseDatabase.getInstance().getReference("rooms")
                                 .child(roomId!!)
                                 .child("status")
                                 .setValue(STATE_CREATER_TURN)
-                    }
                 }
                 STATE_CREATER_TURN ->{
+                    myTurn = isCreator
                     if (isCreator){
                         bingo_info.text  = "choose one ball "
                     } else{
@@ -49,6 +49,7 @@ class BingoActivity : AppCompatActivity() {
                     }
                 }
                 STATE_JOINER_TURN ->{
+                    myTurn = !isCreator
                     if (!isCreator){
                         bingo_info.text  = "choose one ball "
                     } else{
@@ -184,24 +185,18 @@ class BingoActivity : AppCompatActivity() {
                     holder.button.number = buttons.get(position).number
                     holder.button.isEnabled = !buttons.get(position).picked
                     holder.button.setOnClickListener {
-
-                        val button = it as NumberButton
-                        Log.d(TAG, "button.number: ${button.number}, roomId $roomId")
-                        FirebaseDatabase.getInstance().getReference("rooms")
-                                .child(roomId)
-                                .child("numbers")
-                                .child(button.number.toString())
-                                .setValue(true)
-                        if (isCreator){
-                            FirebaseDatabase.getInstance().getReference("rooms")
-                                    .child(roomId)
-                                    .child("status")
-                                    .setValue(STATE_JOINER_TURN)
-                        }else{
-                            FirebaseDatabase.getInstance().getReference("rooms")
-                                    .child(roomId)
-                                    .child("status")
-                                    .setValue(STATE_CREATER_TURN)
+                        if(myTurn){
+                            val button = it as NumberButton
+                            Log.d(TAG, "button.number: ${button.number}, roomId $roomId")
+                                FirebaseDatabase.getInstance().getReference("rooms")
+                                        .child(roomId)
+                                        .child("numbers")
+                                        .child(button.number.toString())
+                                        .setValue(true)
+                                FirebaseDatabase.getInstance().getReference("rooms")
+                                        .child(roomId)
+                                        .child("status")
+                                        .setValue(if(isCreator) STATE_JOINER_TURN else STATE_CREATER_TURN)
                         }
                     }
                 }
